@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby
+# frozen_string_literal: true
+require 'dotenv'
+require_relative "../lib/providers/genius_provider"
+
+if ARGV.empty?
+  puts "Usage: bin/artist_songs 'artist_name' [max_pages]"
+  exit 1
+end
+
+Dotenv.load
+access_token = ENV["GENIUS_ACCESS_TOKEN"]
+
+artist_name = ARGV[0]
+max_pages   = ARGV[1]&.to_i
+provider    = Providers::GeniusProvider.new(access_token: access_token)
+
+result = provider.artist_songs(artist_name, start_page: 1, max_pages: max_pages)
+
+puts "\n=== Songs for #{artist_name} ===\n"
+puts result[:songs]
