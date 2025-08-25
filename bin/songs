@@ -1,21 +1,41 @@
 #!/usr/bin/env ruby
 # frozen_string_literal: true
-require 'dotenv'
+require "dotenv"
 require_relative "../lib/providers/genius_provider"
 
-if ARGV.empty?
-  puts "Usage: bin/artist_songs 'artist_name' [max_pages]"
-  exit 1
+module ArtistSongsCLI
+  def self.run(args = ARGV, out: $stdout, env: ENV, provider_class: Providers::GeniusProvider)
+    if args.empty?
+      out.puts "Usage: bin/artist_songs 'artist_name' [max_pages]"
+      exit 1
+    end
+
+    Dotenv.load
+
+    access_token = env["GENIUS_ACCESS_TOKEN"]
+    unless access_token && !access_token.empty?
+      out.puts "Set GENIUS_ACCESS_TOKEN in your environment"
+      exit 1
+    end
+
+    artist_name = args[0]
+    max_pages   = args[1]&.to_i
+
+    # allow provider_class to be a callable/factory for testing
+    provider = if provider_class.respond_to?(:new)
+                 provider_class.new(access_token: access_token)
+               else
+                 provider_class.call(access_token: access_token)
+               end
+
+    result = provider.artist_songs(artist_name, start_page: 1, max_pages: max_pages)
+
+    out.puts "\n=== Songs for #{artist_name} ===\n"
+    out.puts result[:songs]
+  end
 end
 
-Dotenv.load
-access_token = ENV["GENIUS_ACCESS_TOKEN"]
-
-artist_name = ARGV[0]
-max_pages   = ARGV[1]&.to_i
-provider    = Providers::GeniusProvider.new(access_token: access_token)
-
-result = provider.artist_songs(artist_name, start_page: 1, max_pages: max_pages)
-
-puts "\n=== Songs for #{artist_name} ===\n"
-puts result[:songs]
+# Run if executed directly
+if __FILE__ == $PROGRAM_NAME
+  ArtistSongsCLI.run
+end
